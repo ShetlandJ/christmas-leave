@@ -1,9 +1,9 @@
 ---
 name: seed
-description: Build and serve a local copy of the leave grid with random fake OFF data. Local only, never touches the Sheet or Apps Script. Trigger on "/seed", optionally with a density 0-1, e.g. "/seed 0.5".
+description: Build and serve a local copy of the leave grid with realistic fake annual leave. Local only, never touches the Sheet or Apps Script. Trigger on "/seed", optionally with a density 0-1, e.g. "/seed 0.5".
 ---
 
-1. Run `python3 dev/seed.py seed <density>` from the project root. Density is the optional argument, default 0.3.
+1. Run `python3 dev/seed.py seed <density>` from the project root. Density is the optional argument, default 0.45.
 2. Run `dev/serve.sh`. It starts a static server on port 8731 if one isn't already running and prints the URL.
 3. Report the cell count from step 1 and these URLs on separate lines:
    - `http://localhost:8731/#local-1` acts as the first fake person (editable row)

@@ -15,18 +15,24 @@
     .wrap { overflow: auto; max-height: calc(100vh - 56px); }
     table { border-collapse: separate; border-spacing: 0; }
     th, td { border-right: 1px solid #e0e0dc; border-bottom: 1px solid #e0e0dc; text-align: center; white-space: nowrap; }
-    thead th { position: sticky; top: 0; background: #fff; z-index: 2; padding: 8px 6px; font-weight: 600; font-size: 12px; line-height: 1.2; height: 45px; }
-    thead tr.totals th, thead tr.totals td { position: sticky; top: 45px; height: auto; background: #fff; z-index: 2; font-size: 12px; font-weight: 600; padding: 4px 6px; color: #6b7280; border-bottom: 2px solid #c9c9c4; text-align: center; }
+    thead th { position: sticky; background: #fff; z-index: 2; font-weight: 600; line-height: 1.2; }
+    thead tr.months th { top: 0; height: 26px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #6b7280; text-align: left; padding: 0 8px; }
+    thead tr.days th { top: 26px; height: 46px; padding: 5px 6px; }
+    thead tr.days .wd { display: block; font-size: 10px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
+    thead tr.days .dn { display: block; font-size: 16px; font-weight: 600; }
+    thead tr.days th.weekend .wd, thead tr.days th.weekend .dn { color: #9aa1ab; }
+    thead tr.totals th, thead tr.totals td { position: sticky; top: 72px; height: auto; background: #fff; z-index: 2; font-size: 12px; font-weight: 600; padding: 4px 6px; color: #6b7280; border-bottom: 2px solid #c9c9c4; text-align: center; }
     thead tr.totals th { left: 0; z-index: 4; text-align: left; padding-left: 12px; font-weight: 500; }
     thead tr.totals td.hot { color: #b42318; }
     thead th.weekend, td.weekend { background: #efefeb; }
+    th.ms, td.ms { border-left: 2px solid #c9c9c4; }
     tr.me th { background: #eef5ef; font-weight: 600; }
     tr.me td.cell { box-shadow: inset 0 0 0 1px #9fc3a8; }
     td.cell.ro { cursor: default; }
     td.cell.ro:hover { background: inherit; }
     td.cell.ro.weekend:hover { background: #efefeb; }
     tbody th { position: sticky; left: 0; background: #fff; z-index: 1; text-align: left; padding: 0 12px; font-weight: 500; min-width: 140px; }
-    thead tr:first-child th:first-child { left: 0; z-index: 4; }
+    thead th:first-child { left: 0; z-index: 4; }
     td.cell { width: 56px; height: 44px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
     td.cell:hover { background: #e9f1ea; }
     td.cell.off { background: #2f7d4a; color: #fff; font-weight: 600; }
@@ -53,6 +59,7 @@
     var TOKEN = location.hash.replace(/^#/, '');
     var grid = null;
     var inflight = 0;
+    var MONTHS = { Jan: 'January', Feb: 'February', Mar: 'March', Apr: 'April', May: 'May', Jun: 'June', Jul: 'July', Aug: 'August', Sep: 'September', Oct: 'October', Nov: 'November', Dec: 'December' };
 
     function load() {
       fetch(API + '?json=1&token=' + encodeURIComponent(TOKEN) + '&_=' + Date.now())
@@ -86,7 +93,7 @@
       var tds = document.querySelectorAll('tr.totals td');
       grid.dates.forEach(function (_, c) {
         var t = grid.off.reduce(function (n, row) { return n + (row[c] ? 1 : 0); }, 0);
-        if (tds[c]) { tds[c].textContent = t; tds[c].className = t >= Math.ceil(grid.names.length / 2) ? 'hot' : ''; }
+        if (tds[c]) { tds[c].textContent = t; tds[c].classList.toggle('hot', t >= Math.ceil(grid.names.length / 2)); }
       });
     }
 
@@ -105,13 +112,28 @@
       var totals = data.dates.map(function (_, c) {
         return data.off.reduce(function (n, row) { return n + (row[c] ? 1 : 0); }, 0);
       });
-      var h = '<table><thead><tr><th></th>';
-      data.dates.forEach(function (d) {
-        h += '<th class="' + (d.weekend ? 'weekend' : '') + '">' + esc(d.label).replace(' ', '<br>') + '</th>';
+      // Labels arrive as 'Mon 21 Dec'. Split them so the weekday sits over the day
+      // number, and band the months across the top.
+      var parts = data.dates.map(function (d) { return String(d.label).split(' '); });
+      var ms = parts.map(function (p, i) { return i > 0 && p[2] !== parts[i - 1][2]; });
+      var groups = [];
+      parts.forEach(function (p) {
+        var last = groups[groups.length - 1];
+        if (last && last.m === p[2]) last.n++; else groups.push({ m: p[2], n: 1 });
+      });
+      var h = '<table><thead><tr class="months"><th></th>';
+      groups.forEach(function (g, i) {
+        h += '<th colspan="' + g.n + '"' + (i ? ' class="ms"' : '') + '>' + esc(MONTHS[g.m] || g.m) + '</th>';
+      });
+      h += '</tr><tr class="days"><th></th>';
+      data.dates.forEach(function (d, c) {
+        h += '<th class="' + (d.weekend ? 'weekend ' : '') + (ms[c] ? 'ms' : '') + '">'
+          + '<span class="wd">' + esc(parts[c][0]) + '</span>'
+          + '<span class="dn">' + esc(parts[c][1]) + '</span></th>';
       });
       h += '</tr><tr class="totals"><th>Off that day</th>';
-      totals.forEach(function (t) {
-        h += '<td class="' + (t >= Math.ceil(data.names.length / 2) ? 'hot' : '') + '">' + t + '</td>';
+      totals.forEach(function (t, c) {
+        h += '<td class="' + (t >= Math.ceil(data.names.length / 2) ? 'hot ' : '') + (ms[c] ? 'ms' : '') + '">' + t + '</td>';
       });
       h += '</tr></thead><tbody>';
       data.names.forEach(function (name, r) {
@@ -119,7 +141,7 @@
         h += '<tr' + (mine ? ' class="me"' : '') + '><th>' + esc(name) + '</th>';
         data.dates.forEach(function (d, c) {
           var on = data.off[r][c];
-          h += '<td class="cell' + (on ? ' off' : '') + (d.weekend ? ' weekend' : '') + (mine ? '' : ' ro') + '" data-r="' + r + '" data-c="' + c + '">' + (on ? 'OFF' : '') + '</td>';
+          h += '<td class="cell' + (on ? ' off' : '') + (d.weekend ? ' weekend' : '') + (ms[c] ? ' ms' : '') + (mine ? '' : ' ro') + '" data-r="' + r + '" data-c="' + c + '">' + (on ? 'OFF' : '') + '</td>';
         });
         h += '</tr>';
       });

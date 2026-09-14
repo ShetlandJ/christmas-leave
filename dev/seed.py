@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Local fake data for index.html. Nothing here touches Google.
 
-  python3 dev/seed.py seed [density]   build dev/index.html with random OFF cells (default 0.3)
+  python3 dev/seed.py seed [density]   build dev/index.html with fake leave (default 0.45)
   python3 dev/seed.py unseed           rebuild it with every cell blank
 
 The built page swaps window.fetch for an in-page stub, so the real UI runs
@@ -23,11 +23,43 @@ NAMES = ["Ada Lovelace", "Brian Kernighan", "Carol Shaw", "Dennis Ritchie", "Eri
          "Vint Cerf", "Wendy Hall"]
 START, DAYS = date(2026, 12, 21), 19
 
+# Scottish bank holidays in range: Christmas Day, the Boxing Day substitute,
+# New Year's Day, and the 2 January substitute. Nobody books leave on these.
+HOLIDAYS = {date(2026, 12, 25), date(2026, 12, 28), date(2027, 1, 1), date(2027, 1, 4)}
+
+
 def grid(density):
-    dates = [{"label": (START + timedelta(d)).strftime("%a %-d %b"),
-              "weekend": (START + timedelta(d)).weekday() >= 5} for d in range(DAYS)]
-    off = [[random.random() < density for _ in dates] for _ in NAMES]
+    days = [START + timedelta(d) for d in range(DAYS)]
+    dates = [{"label": d.strftime("%a %-d %b"), "weekend": d.weekday() >= 5} for d in days]
+    bookable = [i for i, d in enumerate(days) if d.weekday() < 5 and d not in HOLIDAYS]
+    off = []
+    for _ in NAMES:
+        row = [False] * DAYS
+        for i in leave(bookable, density):
+            row[i] = True
+        off.append(row)
     return {"dates": dates, "names": NAMES, "off": off}
+
+
+def leave(bookable, density):
+    """The days one person books. Real annual leave, not confetti: whole days
+    in contiguous runs, never on a weekend or a bank holiday, and somebody
+    always stays behind. Density shifts how much of the team is away."""
+    if density <= 0 or random.random() < max(0.12, 0.5 - density):
+        return []                                      # working through
+    if random.random() < density * 0.5:
+        return list(bookable)                          # off the whole shutdown
+    if random.random() < 0.25:                         # a few days either side of the break
+        half = len(bookable) // 2
+        return sorted(run(bookable[:half], random.randint(1, 3))
+                      + run(bookable[half:], random.randint(1, 3)))
+    return run(bookable, random.randint(2, 5))         # one block
+
+
+def run(days, n):
+    n = min(n, len(days))
+    s = random.randint(0, len(days) - n)
+    return days[s:s + n]
 
 def build(data):
     html = SRC.read_text()
@@ -61,11 +93,12 @@ window.fetch = function (url, opts) {{
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "seed"
     if cmd == "seed":
-        density = float(sys.argv[2]) if len(sys.argv) > 2 else 0.3
+        density = float(sys.argv[2]) if len(sys.argv) > 2 else 0.45
         data = grid(density)
         build(data)
         n = sum(map(sum, data["off"]))
-        print(f"seeded {n} of {len(NAMES) * DAYS} cells OFF -> {OUT.relative_to(ROOT)}")
+        away = sum(1 for row in data["off"] if any(row))
+        print(f"seeded {n} days of leave across {away} of {len(NAMES)} people -> {OUT.relative_to(ROOT)}")
     elif cmd == "unseed":
         build(grid(0))
         print(f"cleared -> {OUT.relative_to(ROOT)}")
