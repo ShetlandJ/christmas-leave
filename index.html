@@ -15,7 +15,10 @@
     .wrap { overflow: auto; max-height: calc(100vh - 56px); }
     table { border-collapse: separate; border-spacing: 0; }
     th, td { border-right: 1px solid #e0e0dc; border-bottom: 1px solid #e0e0dc; text-align: center; white-space: nowrap; }
-    thead th { position: sticky; top: 0; background: #fff; z-index: 2; padding: 8px 6px; font-weight: 600; font-size: 12px; line-height: 1.2; }
+    thead th { position: sticky; top: 0; background: #fff; z-index: 2; padding: 8px 6px; font-weight: 600; font-size: 12px; line-height: 1.2; height: 45px; }
+    thead tr.totals th, thead tr.totals td { position: sticky; top: 45px; height: auto; background: #fff; z-index: 2; font-size: 12px; font-weight: 600; padding: 4px 6px; color: #6b7280; border-bottom: 2px solid #c9c9c4; text-align: center; }
+    thead tr.totals th { left: 0; z-index: 4; text-align: left; padding-left: 12px; font-weight: 500; }
+    thead tr.totals td.hot { color: #b42318; }
     thead th.weekend, td.weekend { background: #efefeb; }
     tr.me th { background: #eef5ef; font-weight: 600; }
     tr.me td.cell { box-shadow: inset 0 0 0 1px #9fc3a8; }
@@ -23,16 +26,13 @@
     td.cell.ro:hover { background: inherit; }
     td.cell.ro.weekend:hover { background: #efefeb; }
     tbody th { position: sticky; left: 0; background: #fff; z-index: 1; text-align: left; padding: 0 12px; font-weight: 500; min-width: 140px; }
-    thead th:first-child { left: 0; z-index: 4; }
+    thead tr:first-child th:first-child { left: 0; z-index: 4; }
     td.cell { width: 56px; height: 44px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
     td.cell:hover { background: #e9f1ea; }
     td.cell.off { background: #2f7d4a; color: #fff; font-weight: 600; }
     td.cell.off:hover { background: #27693e; }
     td.cell.pending::after { content: ''; position: absolute; right: 4px; top: 4px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .5; }
     td.cell { position: relative; }
-    tfoot th, tfoot td { position: sticky; bottom: 0; background: #fff; font-size: 12px; padding: 6px; color: #6b7280; border-top: 2px solid #c9c9c4; }
-    tfoot th { left: 0; text-align: left; padding-left: 12px; z-index: 1; }
-    tfoot td.hot { color: #b42318; font-weight: 600; }
     .empty { padding: 40px 16px; text-align: center; color: #6b7280; }
     .err { background: #fde8e8; color: #7a1c1c; padding: 8px 16px; font-size: 13px; }
   </style>
@@ -83,7 +83,7 @@
     }
 
     function paintTotals() {
-      var tds = document.querySelectorAll('tfoot td');
+      var tds = document.querySelectorAll('tr.totals td');
       grid.dates.forEach(function (_, c) {
         var t = grid.off.reduce(function (n, row) { return n + (row[c] ? 1 : 0); }, 0);
         if (tds[c]) { tds[c].textContent = t; tds[c].className = t >= Math.ceil(grid.names.length / 2) ? 'hot' : ''; }
@@ -109,6 +109,10 @@
       data.dates.forEach(function (d) {
         h += '<th class="' + (d.weekend ? 'weekend' : '') + '">' + esc(d.label).replace(' ', '<br>') + '</th>';
       });
+      h += '</tr><tr class="totals"><th>Off that day</th>';
+      totals.forEach(function (t) {
+        h += '<td class="' + (t >= Math.ceil(data.names.length / 2) ? 'hot' : '') + '">' + t + '</td>';
+      });
       h += '</tr></thead><tbody>';
       data.names.forEach(function (name, r) {
         var mine = name === data.me;
@@ -119,11 +123,7 @@
         });
         h += '</tr>';
       });
-      h += '</tbody><tfoot><tr><th>Off that day</th>';
-      totals.forEach(function (t) {
-        h += '<td class="' + (t >= Math.ceil(data.names.length / 2) ? 'hot' : '') + '">' + t + '</td>';
-      });
-      h += '</tr></tfoot></table>';
+      h += '</tbody></table>';
       host.innerHTML = h;
     }
 
