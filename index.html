@@ -2,6 +2,8 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Christmas leave</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1f2933; background: #f7f7f5; }
@@ -42,11 +44,22 @@
   <div class="wrap"><div id="grid" class="empty">Loading…</div></div>
 
   <script>
+    var API = 'https://script.google.com/macros/s/AKfycbx4_-6gTRwgYTEq75aAcIQ__dKKYCRfmKKuW2aaPeqkwc2P8z706JujDSSe-0A_s-NMkw/exec';
     var grid = null;
     var inflight = 0;
 
     function load() {
-      google.script.run.withSuccessHandler(render).withFailureHandler(fail).getGrid();
+      fetch(API + '?json=1&_=' + Date.now())
+        .then(function (r) { return r.json(); })
+        .then(render)
+        .catch(fail);
+    }
+
+    // text/plain avoids a CORS preflight, which Apps Script can't answer.
+    function save(name, date, off) {
+      return fetch(API, { method: 'POST', body: JSON.stringify({ name: name, date: date, off: off }), headers: { 'Content-Type': 'text/plain' } })
+        .then(function (r) { return r.json(); })
+        .then(function (res) { if (!res.ok) throw new Error(res.error || 'Save failed'); });
     }
 
     function fail(e) {
@@ -120,20 +133,19 @@
       paintTotals();
       td.classList.add('pending');
       inflight++;
-      google.script.run
-        .withSuccessHandler(function () {
+      save(grid.names[r], grid.dates[c].label, on)
+        .then(function () {
           inflight--;
           td.classList.remove('pending');
         })
-        .withFailureHandler(function (e) {
+        .catch(function (e) {
           inflight--;
           td.classList.remove('pending');
           grid.off[r][c] = !on;
           paintCell(r, c, !on);
           paintTotals();
           fail(e);
-        })
-        .setOff(grid.names[r], grid.dates[c].label, on);
+        });
     });
 
     document.getElementById('refresh').addEventListener('click', load);

@@ -1,6 +1,6 @@
 # Christmas leave grid
 
-One Google Sheet + one Apps Script web app. The Sheet is the database and the admin view; the web page is what staff use.
+One static page on GitHub Pages, one Google Sheet, one Apps Script deployed as a JSON API. The Sheet is the database and the admin view; `index.html` is what staff use.
 
 ## Set up (once, ~5 minutes)
 
@@ -9,13 +9,13 @@ One Google Sheet + one Apps Script web app. The Sheet is the database and the ad
 3. Column A, from A2 down: paste the staff names, one per row.
 4. Menu: Extensions → Apps Script.
 5. In the editor, replace the contents of `Code.gs` with the `Code.gs` from this folder.
-6. Click `+` next to Files → HTML → name it `Index` (exactly). Replace its contents with `Index.html` from this folder.
-7. Save (Cmd/Ctrl+S).
-8. Deploy → New deployment → gear icon → Web app.
+6. Save (Cmd/Ctrl+S).
+7. Deploy → New deployment → gear icon → Web app.
    - Execute as: **Me**
    - Who has access: **Anyone**
    - Deploy. Authorise when asked (Advanced → Go to … → Allow).
-9. Copy the Web app URL (ends in `/exec`). Send that to staff.
+8. Copy the Web app URL (ends in `/exec`) into the `API` constant at the top of `index.html`, and into `SITE` in `Code.gs` put the GitHub Pages URL.
+9. Enable GitHub Pages on the repo (Settings → Pages → branch `master`, folder `/`). Send staff the Pages URL.
 
 ## Day to day
 
@@ -29,6 +29,7 @@ Edit in the Apps Script editor, then Deploy → Manage deployments → pencil ic
 
 ## Live
 
-- Web app (send this to staff): https://script.google.com/macros/s/AKfycbx4_-6gTRwgYTEq75aAcIQ__dKKYCRfmKKuW2aaPeqkwc2P8z706JujDSSe-0A_s-NMkw/exec
+- Site (send this to staff): https://shetlandj.github.io/christmas-leave/
+- API (Apps Script, bounces to the site if opened directly): https://script.google.com/macros/s/AKfycbx4_-6gTRwgYTEq75aAcIQ__dKKYCRfmKKuW2aaPeqkwc2P8z706JujDSSe-0A_s-NMkw/exec
 - Sheet (admin, owner account only): https://docs.google.com/spreadsheets/d/1MhyBe4ffz0ODn-UHn4BAo1hx3o58GOEyGIweX0kBh64/edit
-- First load after a quiet spell can take ~10s to paint. That's the Apps Script sandbox spinning up, not a bug.
+- First data load after a quiet spell can take a few seconds while Apps Script warms up.

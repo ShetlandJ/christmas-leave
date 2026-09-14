@@ -4,10 +4,30 @@
 var TAB = 'Grid';
 var OFF = 'OFF';
 
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Christmas leave')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+var SITE = 'https://shetlandj.github.io/christmas-leave/';
+
+// GET ?json=1 -> grid as JSON (used by the site). Plain GET -> bounce to the site.
+function doGet(e) {
+  if (e && e.parameter && e.parameter.json) return json_(getGrid());
+  return HtmlService.createHtmlOutput(
+    '<meta http-equiv="refresh" content="0; url=' + SITE + '">' +
+    '<p style="font:15px sans-serif;padding:16px">Redirecting to <a href="' + SITE + '">' + SITE + '</a></p>'
+  );
+}
+
+// POST body: {"name":"...","date":"Mon 21 Dec","off":true}
+function doPost(e) {
+  try {
+    var body = JSON.parse(e.postData.contents);
+    setOff(body.name, body.date, !!body.off);
+    return json_({ ok: true });
+  } catch (err) {
+    return json_({ ok: false, error: String(err && err.message || err) });
+  }
+}
+
+function json_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
 function sheet_() {
