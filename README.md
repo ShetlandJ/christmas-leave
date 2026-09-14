@@ -5,7 +5,7 @@ One static page on GitHub Pages, one Google Sheet, one Apps Script deployed as a
 ## Set up (once, ~5 minutes)
 
 1. Create a new Google Sheet. Rename the tab (bottom left) to `Grid`.
-2. Row 1, from B1 across: type the dates, one per column (e.g. `22/12/2026`, `23/12/2026`, … `04/01/2027`). Type the first two and drag-fill the rest. Leave A1 blank.
+2. Row 1, from B1 across: type the dates, one per column (e.g. `21/12/2026`, `22/12/2026`, … `08/01/2027`). Type the first two and drag-fill the rest. Leave A1 blank.
 3. Column A, from A2 down: paste the staff names, one per row.
 4. Menu: Extensions → Apps Script.
 5. In the editor, replace the contents of `Code.gs` with the `Code.gs` from this folder.
@@ -27,13 +27,17 @@ Each person gets their own link and can only change their own row. Everyone sees
 
 ## Day to day
 
-- Staff open their own link and tap boxes. Green `OFF` = off that day. Bottom row counts how many are off each day (red when half or more).
+- Staff open their own link and tap boxes. Green `OFF` = off that day. The row under the dates counts how many are off each day (red when half or more).
 - To add or remove someone: edit column A in the Sheet. To change dates: edit row 1. Refresh the page.
 - The Sheet cells read `OFF` or blank, so print or filter it however you like.
 
 ## Changing the code later
 
 Edit in the Apps Script editor, then Deploy → Manage deployments → pencil icon → Version: **New version** → Deploy. The URL stays the same.
+
+## Handing it over
+
+`HANDOVER.md` is the plain-English version for whoever runs it day to day. Share the Sheet with them as an Editor; leave ownership and the Apps Script deployment where they are, since the web app executes as the owner.
 
 ## Live
 
