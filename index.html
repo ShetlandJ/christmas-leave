@@ -21,9 +21,11 @@
     thead tr.days .wd { display: block; font-size: 10px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
     thead tr.days .dn { display: block; font-size: 16px; font-weight: 600; }
     thead tr.days th.weekend .wd, thead tr.days th.weekend .dn { color: #9aa1ab; }
-    thead tr.totals th, thead tr.totals td { position: sticky; top: 72px; height: auto; background: #fff; z-index: 2; font-size: 12px; font-weight: 600; padding: 4px 6px; color: #6b7280; border-bottom: 2px solid #c9c9c4; text-align: center; }
-    thead tr.totals th { left: 0; z-index: 4; text-align: left; padding-left: 12px; font-weight: 500; }
-    thead tr.totals td.hot { color: #b42318; }
+    thead tr.totals th, thead tr.totals td { position: sticky; top: 72px; height: 42px; background-color: #fff; z-index: 2; font-size: 12px; font-weight: 600; color: #6b7280; border-bottom: 2px solid #c9c9c4; text-align: center; vertical-align: top; padding: 3px 6px 0; }
+    thead tr.totals th { left: 0; z-index: 4; text-align: left; padding-left: 12px; font-weight: 500; vertical-align: middle; }
+    /* A bar grown from the bottom of the cell, under the number. */
+    thead tr.totals td { background-image: linear-gradient(#aebccb, #aebccb); background-repeat: no-repeat; background-position: left bottom; background-size: 100% 0; }
+    thead tr.totals td.hot { color: #b42318; background-image: linear-gradient(#d6a2a0, #d6a2a0); }
     thead th.weekend, td.weekend { background: #efefeb; }
     th.ms, td.ms { border-left: 2px solid #c9c9c4; }
     tr.me th { background: #eef1f5; font-weight: 600; }
@@ -90,11 +92,19 @@
       td.textContent = on ? 'OFF' : '';
     }
 
+    // Bar area is the bottom 26px of a 42px cell, so it never reaches the number.
+    function bar(t, total) {
+      return '100% ' + (total ? Math.round(26 * t / total) : 0) + 'px';
+    }
+
     function paintTotals() {
       var tds = document.querySelectorAll('tr.totals td');
       grid.dates.forEach(function (_, c) {
         var t = grid.off.reduce(function (n, row) { return n + (row[c] ? 1 : 0); }, 0);
-        if (tds[c]) { tds[c].textContent = t; tds[c].classList.toggle('hot', t >= Math.ceil(grid.names.length / 2)); }
+        if (!tds[c]) return;
+        tds[c].textContent = t;
+        tds[c].classList.toggle('hot', t >= Math.ceil(grid.names.length / 2));
+        tds[c].style.backgroundSize = bar(t, grid.names.length);
       });
     }
 
@@ -134,7 +144,8 @@
       });
       h += '</tr><tr class="totals"><th>Off that day</th>';
       totals.forEach(function (t, c) {
-        h += '<td class="' + (t >= Math.ceil(data.names.length / 2) ? 'hot ' : '') + (ms[c] ? 'ms' : '') + '">' + t + '</td>';
+        h += '<td class="' + (t >= Math.ceil(data.names.length / 2) ? 'hot ' : '') + (ms[c] ? 'ms' : '')
+          + '" style="background-size: ' + bar(t, data.names.length) + '">' + t + '</td>';
       });
       h += '</tr></thead><tbody>';
       // Your own row goes first; everyone else keeps the sheet's order. data-r
