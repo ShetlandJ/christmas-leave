@@ -21,7 +21,8 @@
     td.cell:hover { background: #e9f1ea; }
     td.cell.off { background: #2f7d4a; color: #fff; font-weight: 600; }
     td.cell.off:hover { background: #27693e; }
-    td.cell.pending { opacity: .5; }
+    td.cell.pending::after { content: ''; position: absolute; right: 4px; top: 4px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .5; }
+    td.cell { position: relative; }
     tfoot th, tfoot td { position: sticky; bottom: 0; background: #fff; font-size: 12px; padding: 6px; color: #6b7280; border-top: 2px solid #c9c9c4; }
     tfoot th { left: 0; text-align: left; padding-left: 12px; z-index: 1; }
     tfoot td.hot { color: #b42318; font-weight: 600; }
@@ -42,7 +43,7 @@
 
   <script>
     var grid = null;
-    var busy = false;
+    var inflight = 0;
 
     function load() {
       google.script.run.withSuccessHandler(render).withFailureHandler(fail).getGrid();
@@ -53,13 +54,25 @@
       el.textContent = 'Something went wrong: ' + (e && e.message ? e.message : e);
       el.style.display = 'block';
       setTimeout(function () { el.style.display = 'none'; }, 6000);
-      busy = false;
-      if (grid) render(grid);
+    }
+
+    function paintCell(r, c, on) {
+      var td = document.querySelector('td.cell[data-r="' + r + '"][data-c="' + c + '"]');
+      if (!td) return;
+      td.classList.toggle('off', on);
+      td.textContent = on ? 'OFF' : '';
+    }
+
+    function paintTotals() {
+      var tds = document.querySelectorAll('tfoot td');
+      grid.dates.forEach(function (_, c) {
+        var t = grid.off.reduce(function (n, row) { return n + (row[c] ? 1 : 0); }, 0);
+        if (tds[c]) { tds[c].textContent = t; tds[c].className = t >= Math.ceil(grid.names.length / 2) ? 'hot' : ''; }
+      });
     }
 
     function render(data) {
       grid = data;
-      busy = false;
       var host = document.getElementById('grid');
       if (!data.names.length || !data.dates.length) {
         host.className = 'empty';
@@ -99,18 +112,32 @@
 
     document.getElementById('grid').addEventListener('click', function (ev) {
       var td = ev.target.closest('td.cell');
-      if (!td || busy || !grid) return;
+      if (!td || !grid) return;
       var r = +td.dataset.r, c = +td.dataset.c;
-      busy = true;
+      var on = !grid.off[r][c];
+      grid.off[r][c] = on;
+      paintCell(r, c, on);
+      paintTotals();
       td.classList.add('pending');
-      td.classList.toggle('off');
-      td.textContent = td.classList.contains('off') ? 'OFF' : '';
-      google.script.run.withSuccessHandler(render).withFailureHandler(fail)
-        .toggle(grid.names[r], grid.dates[c].label);
+      inflight++;
+      google.script.run
+        .withSuccessHandler(function () {
+          inflight--;
+          td.classList.remove('pending');
+        })
+        .withFailureHandler(function (e) {
+          inflight--;
+          td.classList.remove('pending');
+          grid.off[r][c] = !on;
+          paintCell(r, c, !on);
+          paintTotals();
+          fail(e);
+        })
+        .setOff(grid.names[r], grid.dates[c].label, on);
     });
 
     document.getElementById('refresh').addEventListener('click', load);
-    setInterval(function () { if (!busy) load(); }, 30000);
+    setInterval(function () { if (!inflight) load(); }, 30000);
     load();
   </script>
 </body>

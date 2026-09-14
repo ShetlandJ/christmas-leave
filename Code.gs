@@ -46,7 +46,8 @@ function getGrid() {
 }
 
 // name-based so row/col shifts in the sheet don't misfire.
-function toggle(name, dateLabel) {
+// Sets an explicit state rather than toggling, so rapid taps converge on the last one.
+function setOff(name, dateLabel, off) {
   var lock = LockService.getScriptLock();
   lock.waitLock(5000);
   try {
@@ -64,12 +65,9 @@ function toggle(name, dateLabel) {
       if (String(values[r][0]).trim() === name) { row = r; break; }
     }
     if (row < 0 || col < 0) throw new Error('Cell not found for ' + name + ' / ' + dateLabel);
-    var cell = s.getRange(row + 1, col + 1);
-    var isOff = String(cell.getValue()).trim().toUpperCase() === OFF;
-    cell.setValue(isOff ? '' : OFF);
-    SpreadsheetApp.flush();
+    s.getRange(row + 1, col + 1).setValue(off ? OFF : '');
   } finally {
     lock.releaseLock();
   }
-  return getGrid();
+  return true;
 }
