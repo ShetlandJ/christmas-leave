@@ -26,3 +26,9 @@ One Google Sheet + one Apps Script web app. The Sheet is the database and the ad
 ## Changing the code later
 
 Edit in the Apps Script editor, then Deploy → Manage deployments → pencil icon → Version: **New version** → Deploy. The URL stays the same.
+
+## Live
+
+- Web app (send this to staff): https://script.google.com/macros/s/AKfycbx4_-6gTRwgYTEq75aAcIQ__dKKYCRfmKKuW2aaPeqkwc2P8z706JujDSSe-0A_s-NMkw/exec
+- Sheet (admin, owner account only): https://docs.google.com/spreadsheets/d/1MhyBe4ffz0ODn-UHn4BAo1hx3o58GOEyGIweX0kBh64/edit
+- First load after a quiet spell can take ~10s to paint. That's the Apps Script sandbox spinning up, not a bug.
