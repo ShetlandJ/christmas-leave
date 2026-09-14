@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1f2933; background: #f7f7f5; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e0e0dc; position: sticky; top: 0; z-index: 3; }
+    h1 { font-size: 17px; margin: 0; font-weight: 600; }
+    .hint { font-size: 13px; color: #6b7280; }
+    button { font: inherit; padding: 6px 12px; border: 1px solid #c9c9c4; border-radius: 6px; background: #fff; cursor: pointer; }
+    button:active { background: #eee; }
+    .wrap { overflow: auto; max-height: calc(100vh - 56px); }
+    table { border-collapse: separate; border-spacing: 0; }
+    th, td { border-right: 1px solid #e0e0dc; border-bottom: 1px solid #e0e0dc; text-align: center; white-space: nowrap; }
+    thead th { position: sticky; top: 0; background: #fff; z-index: 2; padding: 8px 6px; font-weight: 600; font-size: 12px; line-height: 1.2; }
+    thead th.weekend, td.weekend { background: #efefeb; }
+    tbody th { position: sticky; left: 0; background: #fff; z-index: 1; text-align: left; padding: 0 12px; font-weight: 500; min-width: 140px; }
+    thead th:first-child { left: 0; z-index: 4; }
+    td.cell { width: 56px; height: 44px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    td.cell:hover { background: #e9f1ea; }
+    td.cell.off { background: #2f7d4a; color: #fff; font-weight: 600; }
+    td.cell.off:hover { background: #27693e; }
+    td.cell.pending { opacity: .5; }
+    tfoot th, tfoot td { position: sticky; bottom: 0; background: #fff; font-size: 12px; padding: 6px; color: #6b7280; border-top: 2px solid #c9c9c4; }
+    tfoot th { left: 0; text-align: left; padding-left: 12px; z-index: 1; }
+    tfoot td.hot { color: #b42318; font-weight: 600; }
+    .empty { padding: 40px 16px; text-align: center; color: #6b7280; }
+    .err { background: #fde8e8; color: #7a1c1c; padding: 8px 16px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Christmas leave</h1>
+      <div class="hint">Tap a box to mark yourself off. Tap again to undo.</div>
+    </div>
+    <button id="refresh">Refresh</button>
+  </header>
+  <div id="err" class="err" style="display:none"></div>
+  <div class="wrap"><div id="grid" class="empty">Loading…</div></div>
+
+  <script>
+    var grid = null;
+    var busy = false;
+
+    function load() {
+      google.script.run.withSuccessHandler(render).withFailureHandler(fail).getGrid();
+    }
+
+    function fail(e) {
+      var el = document.getElementById('err');
+      el.textContent = 'Something went wrong: ' + (e && e.message ? e.message : e);
+      el.style.display = 'block';
+      setTimeout(function () { el.style.display = 'none'; }, 6000);
+      busy = false;
+      if (grid) render(grid);
+    }
+
+    function render(data) {
+      grid = data;
+      busy = false;
+      var host = document.getElementById('grid');
+      if (!data.names.length || !data.dates.length) {
+        host.className = 'empty';
+        host.textContent = 'Nothing here yet. Add names in column A and dates in row 1 of the sheet.';
+        return;
+      }
+      host.className = '';
+      var totals = data.dates.map(function (_, c) {
+        return data.off.reduce(function (n, row) { return n + (row[c] ? 1 : 0); }, 0);
+      });
+      var h = '<table><thead><tr><th></th>';
+      data.dates.forEach(function (d) {
+        h += '<th class="' + (d.weekend ? 'weekend' : '') + '">' + esc(d.label).replace(' ', '<br>') + '</th>';
+      });
+      h += '</tr></thead><tbody>';
+      data.names.forEach(function (name, r) {
+        h += '<tr><th>' + esc(name) + '</th>';
+        data.dates.forEach(function (d, c) {
+          var on = data.off[r][c];
+          h += '<td class="cell' + (on ? ' off' : '') + (d.weekend ? ' weekend' : '') + '" data-r="' + r + '" data-c="' + c + '">' + (on ? 'OFF' : '') + '</td>';
+        });
+        h += '</tr>';
+      });
+      h += '</tbody><tfoot><tr><th>Off that day</th>';
+      totals.forEach(function (t) {
+        h += '<td class="' + (t >= Math.ceil(data.names.length / 2) ? 'hot' : '') + '">' + t + '</td>';
+      });
+      h += '</tr></tfoot></table>';
+      host.innerHTML = h;
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, function (ch) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch];
+      });
+    }
+
+    document.getElementById('grid').addEventListener('click', function (ev) {
+      var td = ev.target.closest('td.cell');
+      if (!td || busy || !grid) return;
+      var r = +td.dataset.r, c = +td.dataset.c;
+      busy = true;
+      td.classList.add('pending');
+      td.classList.toggle('off');
+      td.textContent = td.classList.contains('off') ? 'OFF' : '';
+      google.script.run.withSuccessHandler(render).withFailureHandler(fail)
+        .toggle(grid.names[r], grid.dates[c].label);
+    });
+
+    document.getElementById('refresh').addEventListener('click', load);
+    setInterval(function () { if (!busy) load(); }, 30000);
+    load();
+  </script>
+</body>
+</html>
