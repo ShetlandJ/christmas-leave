@@ -33,7 +33,7 @@ Live URLs and the Sheet link are in `README.md`.
 
 No test suite. Verify against the real thing:
 
-- Local: stub `window.fetch` in a copy of `index.html`, serve it, drive with Playwright. See the session history for the pattern.
+- Local: `/seed [density]` builds `dev/index.html` (real UI, in-page fetch stub, fake names, random OFF cells) and serves it on http://localhost:8731. `#local-1` … `#local-22` act as each fake person. `/unseed` blanks it. Nothing in `dev/` touches Google.
 - Live: load the Pages URL with a token from the `Tokens` tab, toggle a cell, re-fetch `?json=1` and check the cell, then toggle back. Leave the Sheet clean.
 - Sanity-check the API directly with `curl -sL --data '…'` (no `-X POST`, curl must switch to GET on the 302 like a browser does).
 
