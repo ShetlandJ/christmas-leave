@@ -27,6 +27,7 @@
     thead th.weekend, td.weekend { background: #efefeb; }
     th.ms, td.ms { border-left: 2px solid #c9c9c4; }
     tr.me th { background: #eef5ef; font-weight: 600; }
+    tr.pinned td, tr.pinned th { border-bottom: 2px solid #c9c9c4; }
     tr.me td.cell { box-shadow: inset 0 0 0 1px #9fc3a8; }
     td.cell.ro { cursor: default; }
     td.cell.ro:hover { background: inherit; }
@@ -136,9 +137,16 @@
         h += '<td class="' + (t >= Math.ceil(data.names.length / 2) ? 'hot ' : '') + (ms[c] ? 'ms' : '') + '">' + t + '</td>';
       });
       h += '</tr></thead><tbody>';
-      data.names.forEach(function (name, r) {
+      // Your own row goes first; everyone else keeps the sheet's order. data-r
+      // stays the index into data.off, so display order never touches the data.
+      var order = data.names.map(function (_, i) { return i; });
+      if (data.me) order.sort(function (a, b) {
+        return (data.names[b] === data.me) - (data.names[a] === data.me);
+      });
+      order.forEach(function (r, pos) {
+        var name = data.names[r];
         var mine = name === data.me;
-        h += '<tr' + (mine ? ' class="me"' : '') + '><th>' + esc(name) + '</th>';
+        h += '<tr' + (mine ? ' class="me' + (pos === 0 ? ' pinned' : '') + '"' : '') + '><th>' + esc(name) + '</th>';
         data.dates.forEach(function (d, c) {
           var on = data.off[r][c];
           h += '<td class="cell' + (on ? ' off' : '') + (d.weekend ? ' weekend' : '') + (ms[c] ? ' ms' : '') + (mine ? '' : ' ro') + '" data-r="' + r + '" data-c="' + c + '">' + (on ? 'OFF' : '') + '</td>';
