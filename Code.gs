@@ -2,24 +2,32 @@
 // Sheet tab "Grid": row 1 = dates (B1 onward), column A = names (A2 down), body cells = "OFF" or blank.
 
 var TAB = 'Grid';
+var TOKENS_TAB = 'Tokens';
 var OFF = 'OFF';
 
 var SITE = 'https://shetlandj.github.io/christmas-leave/';
 
 // GET ?json=1 -> grid as JSON (used by the site). Plain GET -> bounce to the site.
 function doGet(e) {
-  if (e && e.parameter && e.parameter.json) return json_(getGrid());
+  if (e && e.parameter && e.parameter.json) {
+    var grid = getGrid();
+    grid.me = tokens_()[String(e.parameter.token || '')] || null;
+    return json_(grid);
+  }
   return HtmlService.createHtmlOutput(
     '<meta http-equiv="refresh" content="0; url=' + SITE + '">' +
     '<p style="font:15px sans-serif;padding:16px">Redirecting to <a href="' + SITE + '">' + SITE + '</a></p>'
   );
 }
 
-// POST body: {"name":"...","date":"Mon 21 Dec","off":true}
+// POST body: {"token":"<uuid>","date":"Mon 21 Dec","off":true}
+// The token decides whose row is written. Nobody can edit anyone else's.
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
-    setOff(body.name, body.date, !!body.off);
+    var name = tokens_()[String(body.token || '')];
+    if (!name) throw new Error('Unknown link. Use the one you were sent.');
+    setOff(name, body.date, !!body.off);
     return json_({ ok: true });
   } catch (err) {
     return json_({ ok: false, error: String(err && err.message || err) });
@@ -34,6 +42,44 @@ function sheet_() {
   var s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB);
   if (!s) throw new Error('No tab called "' + TAB + '"');
   return s;
+}
+
+// Tokens tab: Name | Token | Link. Every name in Grid gets a UUID the first time this runs.
+// Mam sends each person their Link. Returns {token: name}.
+function tokens_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var t = ss.getSheetByName(TOKENS_TAB);
+  if (!t) {
+    t = ss.insertSheet(TOKENS_TAB);
+    t.appendRow(['Name', 'Token', 'Link']);
+    t.setFrozenRows(1);
+  }
+  var names = sheet_().getDataRange().getValues().slice(1)
+    .map(function (r) { return String(r[0]).trim(); })
+    .filter(Boolean);
+  var rows = t.getDataRange().getValues();
+  var have = {};
+  var map = {};
+  rows.forEach(function (r) {
+    var n = String(r[0]).trim(), tok = String(r[1]).trim();
+    if (n && tok && n !== 'Name') { have[n] = tok; map[tok] = n; }
+  });
+  var missing = names.filter(function (n) { return !have[n]; });
+  if (missing.length) {
+    var lock = LockService.getScriptLock();
+    lock.waitLock(5000);
+    try {
+      var fresh = missing.map(function (n) {
+        var tok = Utilities.getUuid();
+        map[tok] = n;
+        return [n, tok, SITE + '#' + tok];
+      });
+      t.getRange(t.getLastRow() + 1, 1, fresh.length, 3).setValues(fresh);
+    } finally {
+      lock.releaseLock();
+    }
+  }
+  return map;
 }
 
 function getGrid() {

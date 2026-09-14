@@ -17,6 +17,11 @@
     th, td { border-right: 1px solid #e0e0dc; border-bottom: 1px solid #e0e0dc; text-align: center; white-space: nowrap; }
     thead th { position: sticky; top: 0; background: #fff; z-index: 2; padding: 8px 6px; font-weight: 600; font-size: 12px; line-height: 1.2; }
     thead th.weekend, td.weekend { background: #efefeb; }
+    tr.me th { background: #eef5ef; font-weight: 600; }
+    tr.me td.cell { box-shadow: inset 0 0 0 1px #9fc3a8; }
+    td.cell.ro { cursor: default; }
+    td.cell.ro:hover { background: inherit; }
+    td.cell.ro.weekend:hover { background: #efefeb; }
     tbody th { position: sticky; left: 0; background: #fff; z-index: 1; text-align: left; padding: 0 12px; font-weight: 500; min-width: 140px; }
     thead th:first-child { left: 0; z-index: 4; }
     td.cell { width: 56px; height: 44px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -36,7 +41,7 @@
   <header>
     <div>
       <h1>Christmas leave</h1>
-      <div class="hint">Tap a box to mark yourself off. Tap again to undo.</div>
+      <div class="hint" id="hint">Loading…</div>
     </div>
     <button id="refresh">Refresh</button>
   </header>
@@ -45,11 +50,12 @@
 
   <script>
     var API = 'https://script.google.com/macros/s/AKfycbx4_-6gTRwgYTEq75aAcIQ__dKKYCRfmKKuW2aaPeqkwc2P8z706JujDSSe-0A_s-NMkw/exec';
+    var TOKEN = location.hash.replace(/^#/, '');
     var grid = null;
     var inflight = 0;
 
     function load() {
-      fetch(API + '?json=1&_=' + Date.now())
+      fetch(API + '?json=1&token=' + encodeURIComponent(TOKEN) + '&_=' + Date.now())
         .then(function (r) { return r.json(); })
         .then(render)
         .catch(fail);
@@ -57,7 +63,7 @@
 
     // text/plain avoids a CORS preflight, which Apps Script can't answer.
     function save(name, date, off) {
-      return fetch(API, { method: 'POST', body: JSON.stringify({ name: name, date: date, off: off }), headers: { 'Content-Type': 'text/plain' } })
+      return fetch(API, { method: 'POST', body: JSON.stringify({ token: TOKEN, date: date, off: off }), headers: { 'Content-Type': 'text/plain' } })
         .then(function (r) { return r.json(); })
         .then(function (res) { if (!res.ok) throw new Error(res.error || 'Save failed'); });
     }
@@ -86,6 +92,9 @@
 
     function render(data) {
       grid = data;
+      document.getElementById('hint').textContent = data.me
+        ? 'Hi ' + data.me.split(' ')[0] + '. Tap a box to mark yourself off, tap again to undo.'
+        : 'View only. To mark your days, open the link you were sent.';
       var host = document.getElementById('grid');
       if (!data.names.length || !data.dates.length) {
         host.className = 'empty';
@@ -102,10 +111,11 @@
       });
       h += '</tr></thead><tbody>';
       data.names.forEach(function (name, r) {
-        h += '<tr><th>' + esc(name) + '</th>';
+        var mine = name === data.me;
+        h += '<tr' + (mine ? ' class="me"' : '') + '><th>' + esc(name) + '</th>';
         data.dates.forEach(function (d, c) {
           var on = data.off[r][c];
-          h += '<td class="cell' + (on ? ' off' : '') + (d.weekend ? ' weekend' : '') + '" data-r="' + r + '" data-c="' + c + '">' + (on ? 'OFF' : '') + '</td>';
+          h += '<td class="cell' + (on ? ' off' : '') + (d.weekend ? ' weekend' : '') + (mine ? '' : ' ro') + '" data-r="' + r + '" data-c="' + c + '">' + (on ? 'OFF' : '') + '</td>';
         });
         h += '</tr>';
       });
@@ -127,6 +137,7 @@
       var td = ev.target.closest('td.cell');
       if (!td || !grid) return;
       var r = +td.dataset.r, c = +td.dataset.c;
+      if (grid.names[r] !== grid.me) return;
       var on = !grid.off[r][c];
       grid.off[r][c] = on;
       paintCell(r, c, on);

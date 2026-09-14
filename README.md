@@ -17,9 +17,17 @@ One static page on GitHub Pages, one Google Sheet, one Apps Script deployed as a
 8. Copy the Web app URL (ends in `/exec`) into the `API` constant at the top of `index.html`, and into `SITE` in `Code.gs` put the GitHub Pages URL.
 9. Enable GitHub Pages on the repo (Settings → Pages → branch `master`, folder `/`). Send staff the Pages URL.
 
+## Personal links
+
+Each person gets their own link and can only change their own row. Everyone sees the whole grid.
+
+- Links live in the Sheet's `Tokens` tab (Name, Token, Link). The tab fills itself the first time anyone loads the site after a name is added to `Grid`.
+- Send each person their Link from that tab. Opening the site without a link is view-only.
+- If someone loses their link, just send it again. To revoke one, clear their row in `Tokens` and reload the site to mint a new one.
+
 ## Day to day
 
-- Staff open the URL and tap boxes. Green `OFF` = off that day. Bottom row counts how many are off each day (red when half or more).
+- Staff open their own link and tap boxes. Green `OFF` = off that day. Bottom row counts how many are off each day (red when half or more).
 - To add or remove someone: edit column A in the Sheet. To change dates: edit row 1. Refresh the page.
 - The Sheet cells read `OFF` or blank, so print or filter it however you like.
 
